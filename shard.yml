@@ -1,0 +1,13 @@
+name: torrent-client
+version: 0.1.0
+
+authors:
+  - lbarasti <lbarasti@users.noreply.github.com>
+
+targets:
+  torrent-client:
+    main: src/torrent-client.cr
+
+crystal: 0.34.0
+
+license: MIT

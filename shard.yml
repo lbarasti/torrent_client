@@ -8,6 +8,10 @@ targets:
   torrent-client:
     main: src/torrent-client.cr
 
-crystal: 0.34.0
+dependencies:
+  bencode:
+    github: lbarasti/bencode
+
+crystal: 0.35.1
 
 license: MIT

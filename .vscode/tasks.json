@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+    {
+      "label": "Crystal run",
+      "type": "shell",
+      "command": "crystal ${file}",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
+}

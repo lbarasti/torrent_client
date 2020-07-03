@@ -1,0 +1,6 @@
+version: 2.0
+shards:
+  bencode:
+    git: https://github.com/lbarasti/bencode.git
+    version: 0.2.1
+

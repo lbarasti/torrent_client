@@ -1,6 +1,11 @@
-# TODO: Write documentation for `Torrent::Client`
-module Torrent::Client
-  VERSION = "0.1.0"
+require "log"
+require "./lib/torrent_file"
 
-  # TODO: Put your code here
-end
+# in_path = ARGV[0]
+# out_path = ARGV[1]
+
+
+tor_file = File.join(__DIR__, "../spec/testdata/debian.iso.torrent")
+
+TorrentFile.open(tor_file)
+  .download_to_file("./res")

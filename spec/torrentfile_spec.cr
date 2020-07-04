@@ -14,7 +14,7 @@ describe TorrentFile do
 
     t.download_to_file("./res")
   end
-  
+
   it "reads from file" do
     t = TorrentFile.open("./spec/testdata/archlinux-2019.12.01-x86_64.iso.torrent")
     t.announce.should eq "http://tracker.archlinux.org:6969/announce"
@@ -33,7 +33,7 @@ describe TorrentFile do
   it "can build a tracker URL" do
     url = torrent.build_tracker_url(peer_id, port)
     expected = "http://bttracker.debian.org:6969/announce?compact=1&downloaded=0&info_hash=C%FCnr%A7%AB%EA%8B%ADp%BE%B1%F2%BD8u%5C7%EA%2F&left=351272960&peer_id=%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14&port=6881&uploaded=0"
-    
+
     url.should eq expected
   end
 

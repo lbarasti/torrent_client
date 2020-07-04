@@ -7,7 +7,7 @@ record TorrentInfo,
   length : Int64,
   name : String do
   include Bencode::Serializable
-  
+
   @[Bencode::Field(key: "piece length")]
   getter piece_length : Int64
 
@@ -21,7 +21,7 @@ record TorrentInfo,
     num_hashes, rem = bytes.size.divmod hash_len
     raise Exception.new("wrong size for piece hashes") if rem != 0
     (0...num_hashes).map { |i|
-      bytes[i*hash_len...((i+1)*hash_len)]
+      bytes[i*hash_len...((i + 1)*hash_len)]
     }
   end
 end

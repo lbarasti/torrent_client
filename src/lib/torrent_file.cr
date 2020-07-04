@@ -26,7 +26,7 @@ record TorrentFile, announce : String, info : TorrentInfo do
   def self.open(path : String)
     TorrentFile.from_bencode(File.read(path))
   end
-  
+
   def build_tracker_url(peer_id : Bytes, port : Int32)
     base = URI.parse(self.announce)
     params = {
@@ -54,7 +54,7 @@ record TorrentFile, announce : String, info : TorrentInfo do
   def download_to_file(path : String)
     peer_id = Random.new.random_bytes(20)
     peers = self.request_peers(peer_id, Port)
-    
+
     torrent = Torrent.new(
       peers,
       peer_id,

@@ -4,7 +4,7 @@ require "./peers"
 record PieceWork,
   index : Int32,
   hash : Bytes,
-  length : Int64 
+  length : Int64
 
 record PieceResult,
   index : Int32,
@@ -18,10 +18,9 @@ record Torrent,
   piece_length : Int32,
   length : Int64,
   name : String do
-  
   def start_download_worker(peer : Peer, work_queue : Channel(PieceWork), results : Channel(PieceResult))
-    Log.info { "started worker for #{Fiber.current.name}"}
-    res = PieceResult.new(rand(self.piece_hashes.size//2), Bytes[1,2,3])
+    Log.info { "started worker for #{Fiber.current.name}" }
+    res = PieceResult.new(rand(self.piece_hashes.size//2), Bytes[1, 2, 3])
     sleep rand(20)
     results.send(res)
   end
@@ -60,7 +59,7 @@ record Torrent,
       res = results.receive
       piece_start, piece_end = self.calculate_bounds_for_piece(res.index)
       Log.info { "size: #{res.buf.size} index: #{res.index}: #{piece_start}, #{piece_end}" }
-      
+
       # TODO is it necessary to limit res.buf to not go out of bound?
       res.buf.copy_to(buf + piece_start)
 

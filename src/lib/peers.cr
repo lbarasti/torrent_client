@@ -11,8 +11,8 @@ module Peers
 
     (0...num_peers).map { |i|
       offset = i * PEER_SIZE
-      ip = binary[offset...(offset+4)].join(".")
-      port = binary[(offset+4)...(offset+6)].reduce(0_u16) {|ac, v| (ac << 8) | v }
+      ip = binary[offset...(offset + 4)].join(".")
+      port = binary[(offset + 4)...(offset + 6)].reduce(0_u16) { |ac, v| (ac << 8) | v }
       Peer.new(ip, port.to_i32)
     }
   end

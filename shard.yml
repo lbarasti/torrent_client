@@ -1,12 +1,12 @@
-name: torrent-client
+name: torrent_client
 version: 0.1.0
 
 authors:
   - lbarasti <lbarasti@users.noreply.github.com>
 
 targets:
-  torrent-client:
-    main: src/torrent-client.cr
+  torrent_client:
+    main: src/torrent_client.cr
 
 dependencies:
   bencode:

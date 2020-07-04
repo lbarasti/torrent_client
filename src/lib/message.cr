@@ -1,3 +1,5 @@
+require "./io_encodable"
+
 module Message
   enum MsgId
     Choke         # chokes the receiver
@@ -12,6 +14,8 @@ module Message
   end
 
   abstract class Msg
+    include IoEncodable
+
     abstract def payload_size
     abstract def msg_id
     abstract def payload(io : IO)
@@ -48,12 +52,6 @@ module Message
       write_uint(io, length)
       io.write_byte self.msg_id.to_u8
       self.payload(io)
-    end
-
-    def encode : Bytes
-      IO::Memory.new.tap { |io|
-        encode(io)
-      }.to_slice
     end
 
     def write_uint(io, uint : UInt32)

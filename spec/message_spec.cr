@@ -72,21 +72,3 @@ describe Message do
     }
   end
 end
-
-# target = IO::Memory.new
-# RequestMsg.new(3, 2, 256).encode(target)
-# puts target.to_slice
-
-# source = Bytes[0, 0, 0, 5, 4, 1, 0, 1, 0]
-# target = IO::Memory.new
-# m = Msg.decode(IO::Memory.new(source))
-# m.encode(target)
-
-# puts target.to_slice == source
-
-# source = Bytes[0, 0, 0, 11, 7, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1]
-# target = IO::Memory.new
-# m = Msg.decode(IO::Memory.new(source))
-# m.encode(target)
-
-# puts m.as(PieceMsg).piece_start, target.to_slice

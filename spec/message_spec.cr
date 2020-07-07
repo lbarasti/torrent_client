@@ -21,6 +21,17 @@ describe Message do
     have.encode.should eq expected
   end
 
+  it "can encode Bitfield messages" do
+    bf = Message::Bitfield.new(Bytes[1, 2, 3, 4, 5])
+
+    expected = Bytes[
+      0, 0, 0, (bf.bitfield.size + 1),
+      Message::MsgId::Bitfield,
+      1, 2, 3, 4, 5
+    ]
+    bf.encode.should eq expected
+  end
+
   it "can decode Have messages" do
     source = Bytes[0, 0, 0, 5, Message::MsgId::Have, 0, 0, 1, 0]
 
@@ -39,6 +50,18 @@ describe Message do
     have.index.should eq 256
     have.piece_start.should eq 257
     have.data.should eq Bytes[0, 0, 1, 0, 0, 1]
+  end
+
+  it "can decode a Bitfield" do
+    bitfield = Random.new.random_bytes(1024)
+    io = IO::Memory.new
+    io.write Bytes[0, 0, 4, 1]
+    io.write_byte Message::MsgId::Bitfield.to_u8
+    io.write bitfield
+
+    bf = Message::Msg.decode(io.rewind)
+      .as(Message::Bitfield)
+    bf.bitfield.should eq bitfield
   end
 
   it "raises an exception if the Have payload is too short" do
@@ -70,5 +93,24 @@ describe Message do
     expect_raises(Exception, /Wrong index/) {
       piece.write(index: 1, target: target)
     }
+  end
+
+  it "can check if a piece is available on a Bitfield" do
+    bf = Message::Bitfield.new(Bytes[0, 3, 255, 4])
+    expected = "00000000 00000011 11111111 00000100"
+      .split(" ").flatten
+      .map_with_index { |i, idx| {idx.to_u, i == "1"} }
+
+    expected.each { |idx, present|
+      {idx, bf.has_piece(idx)}.should eq({idx, present})
+    }
+  end
+
+  it "supports Bitfield updates" do
+    bf = Message::Bitfield.new(Bytes[0, 3, 255, 4])
+    
+    bf.has_piece(3).should be_false
+    bf.set_piece(3)
+    bf.has_piece(3).should be_true
   end
 end

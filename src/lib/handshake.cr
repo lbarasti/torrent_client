@@ -1,5 +1,7 @@
 require "./io_encodable"
 
+# Tells a peer which piece we are looking for - `info_hash` - and
+# who we are - `peer_id`.
 record Handshake,
   info_hash : Bytes,
   peer_id : Bytes do

@@ -11,6 +11,7 @@ module Message
     Request       # requests a block of data from the receiver
     Piece         # delivers a block of data to fulfill a request
     Cancel        # cancels a request
+    KeepAlive     # empty message
   end
 
   abstract class Msg
@@ -24,25 +25,34 @@ module Message
     # [length : UInt32 | id : MsgId | payload : Bytes]
     def self.decode(io : IO)
       # FOCUS. Read an unsigned 32 bit integer from IO
-      length = io.read_bytes(UInt32, IO::ByteFormat::BigEndian)
+      length_slice = Bytes.new(4, 0)
+      io.read_fully?(length_slice)
+      return KeepAlive.new if length_slice == Bytes.new(4, 0)
+      length = read_uint(IO::Memory.new(length_slice))
       msg_id = MsgId.new(io.read_byte.not_nil!.to_i)
 
       case msg_id
       when MsgId::Have
         # TODO: Assert length == 4
-        index = io.read_bytes(UInt32, IO::ByteFormat::BigEndian)
+        index = read_uint(io)
         Have.new(index)
       when MsgId::Piece
         # TODO: Assert payload size >= 8
-        index = io.read_bytes(UInt32, IO::ByteFormat::BigEndian)
-        piece_start = io.read_bytes(UInt32, IO::ByteFormat::BigEndian)
+        index = read_uint(io)
+        piece_start = read_uint(io)
         # FOCUS. Fill a slice of given length with input coming from a stream
         data = Bytes.new(length - 9)
         io.read_fully(data) # will throw IO::EOFError if the io is not long enough
         # TODO: Assert IO has ended
         Piece.new(index, piece_start, data)
+      when MsgId::Bitfield
+        data = Bytes.new(length - 1)
+        io.read_fully(data)
+        Bitfield.new(data)
+      when MsgId::Unchoke
+        Unchoke.new
       else
-        raise "Unsupported message id"
+        raise "Unsupported message id #{msg_id}"
       end
     end
 
@@ -57,6 +67,10 @@ module Message
     def write_uint(io, uint : UInt32)
       io.write_bytes(uint, IO::ByteFormat::BigEndian)
     end
+
+    def self.read_uint(io)
+      io.read_bytes(UInt32, IO::ByteFormat::BigEndian)
+    end
   end
 
   class Have < Msg
@@ -69,6 +83,32 @@ module Message
 
     def payload(io)
       write_uint(io, @index)
+    end
+  end
+
+  class Bitfield < Msg
+    getter payload_size : Int32
+    getter msg_id = MsgId::Bitfield
+    getter bitfield
+
+    def initialize(@bitfield : Bytes)
+      @payload_size = @bitfield.size
+    end
+
+    def payload(io)
+      io.write @bitfield
+    end
+
+    def has_piece(index : UInt32)
+      idx, offset = index.divmod 8
+
+      @bitfield[idx] >> (7 - offset) & 1 != 0
+    end
+
+    def set_piece(index : UInt32)
+      idx, offset = index.divmod 8
+
+      @bitfield[idx] |= 1 << (7 - offset)
     end
   end
 
@@ -87,12 +127,13 @@ module Message
       io.write(@data)
     end
 
-    # Writes the the piece onto a target buffer.
+    # Writes the piece onto a target buffer.
     # The provided index must match the piece index, otherwise, an exception is raised
     def write(index : UInt32, target : Bytes)
       raise "Wrong index #{index}, expected #{@index}" if index != @index
       # Focus. Copy bytes from buffer to buffer, with offset
       (target + self.piece_start).copy_from(self.data)
+      self.data.size
     end
   end
 
@@ -110,4 +151,31 @@ module Message
       write_uint(io, @length)
     end
   end
+
+  class Interested < Msg
+    getter payload_size = 0
+    getter msg_id = MsgId::Interested
+
+    def payload(io)
+    end
+  end
+
+
+  class NotInterested < Msg
+    getter payload_size = 0
+    getter msg_id = MsgId::NotInterested
+
+    def payload(io)
+    end
+  end
+
+  {% for t in ["Interested", "NotInterested", "Unchoke", "KeepAlive"] %}
+  class {{t.id}} < Msg
+    getter payload_size = 0
+    getter msg_id = MsgId::{{t.id}}
+
+    def payload(io)
+    end
+  end
+  {% end %}
 end

@@ -1,10 +1,17 @@
 require "log"
+require "./lib/reporter"
 require "./lib/torrent_file"
 
-# in_path = ARGV[0]
-# out_path = ARGV[1]
+Log.define_formatter MyFormat, "#{severity}: #{source}|#{pid}|#{Fiber.current.name}> #{message}#{exception}"
+Log.setup do |c|
+  backend = Log::IOBackend.new File.open("app.log", "w"), formatter: MyFormat
 
-tor_file = File.join(__DIR__, "../spec/testdata/debian-10.2.0-amd64-netinst.iso.torrent")
+  c.bind "*", :debug, backend
+end
 
-TorrentFile.open(tor_file)
-  .download_to_file("./res")
+torrent_path = ARGV[0]
+out_path = ARGV[1]
+
+TorrentFile.open(torrent_path)
+  .to_torrent
+  .download(out_path, Reporter.new)

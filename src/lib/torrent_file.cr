@@ -13,15 +13,7 @@ Port = 6881
 record TorrentFile, announce : String, info : TorrentInfo do
   include Bencode::Serializable
 
-  delegate piece_length, length, name, to: @info
-
-  def info_hash
-    self.info.hash.to_slice.dup
-  end
-
-  def piece_hashes
-    self.info.split_piece_hashes
-  end
+  delegate piece_length, length, name, info_hash, piece_hashes, to: @info
 
   def self.open(path : String)
     TorrentFile.from_bencode(File.read(path))
@@ -46,12 +38,11 @@ record TorrentFile, announce : String, info : TorrentInfo do
     url = self.build_tracker_url peer_id, port
     res = HTTP::Client.get url
 
-    puts res.body
     resp = TrackerResp.from_bencode res.body
     Peers.parse(resp.peers.to_slice)
   end
 
-  def download_to_file(path : String)
+  def to_torrent
     peer_id = Random.new.random_bytes(20)
     peers = self.request_peers(peer_id, Port)
 
@@ -64,10 +55,5 @@ record TorrentFile, announce : String, info : TorrentInfo do
       self.length,
       self.name
     )
-
-    # blocking call, will return once the download is completed
-    buf = torrent.download
-
-    File.write(path, buf)
   end
 end

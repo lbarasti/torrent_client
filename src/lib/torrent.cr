@@ -1,6 +1,7 @@
 require "log"
 require "./peers"
 require "./peer_client"
+require "./reporter"
 
 record PieceWork,
   index : UInt32,
@@ -19,55 +20,58 @@ record Torrent,
   piece_length : Int32,
   length : Int64,
   name : String do
-  def start_download_worker(peer : Peer, work_queue : Channel(PieceWork), results : Channel(PieceResult))
+  def start_download_worker(peer : Peer, work_queue : Channel(PieceWork), results : Channel(PieceResult), reporter : Reporter)
     Log.debug { "started worker for #{Fiber.current.name}" }
     exceptions = 0
 
     client = PeerClient.new(peer, info_hash, peer_id)
 
+    reporter.send({peer: peer, status: :connected})
     loop do
       pw = work_queue.receive
       unless client.bitfield.has_piece(pw.index)
         work_queue.send pw
         next
       end
+      reporter.send({peer: peer, piece: pw.index, status: :started})
       buffer = client.download(pw)
-      raise "hash don't match" if pw.hash != OpenSSL::SHA1.hash(String.new(buffer)).to_slice
+      raise "hash mismatch" if pw.hash != OpenSSL::SHA1.hash(String.new(buffer)).to_slice
       Log.debug { "#{peer} sending piece #{pw.index}" }
 
       Message::Have.new(pw.index).encode(client.@client)
       res = PieceResult.new(pw.index, buffer)
+      reporter.send({peer: peer, piece: pw.index, status: :completed})
       results.send(res)
     rescue e
       Log.warn { "#{peer} shutting down due to #{e.class}" }
       exceptions += 1
-      break if exceptions > 5
       work_queue.send(pw) unless pw.nil?
+      break if exceptions > 5
     end
   end
 
-  def calculate_bounds_for_piece(index)
+  def piece_size(index)
     begin_point : Int64 = index.to_i64 * self.piece_length
     end_point = Math.min(begin_point + self.piece_length, self.length)
-    {begin_point.to_i64, end_point.to_i64}
-  end
-
-  def calculate_piece_size(index)
-    begin_point, end_point = self.calculate_bounds_for_piece(index)
     end_point - begin_point
   end
 
-  def download
+  def download(path, reporter)
     Log.info { "Starting download for #{self.name}" }
-    work_queue = Channel(PieceWork).new(piece_hashes.size)
+    part_dir = "./data/#{self.name}"
+    part_path = ->(index : UInt32) { File.join(part_dir, "#{index}.part") }
+
+    Dir.mkdir(part_dir) unless Dir.exists?(part_dir)
+    piece_total = self.piece_hashes.size
+    work_queue = Channel(PieceWork).new(piece_total)
     results = Channel(PieceResult).new
 
     todo = self.piece_hashes.map_with_index { |hash, index|
       {hash, index}
     }.reject { |(_, index)|
-      File.exists?(File.join("./data/#{index}.part"))
+      File.exists? part_path.call(index.to_u)
     }.map { |(hash, index)|
-      length = self.calculate_piece_size(index)
+      length = self.piece_size(index)
       work_queue.send PieceWork.new(index.to_u, hash, length)
     }.size
 
@@ -77,9 +81,9 @@ record Torrent,
     self.peers.each { |peer|
       spawn(name: "#{peer}_worker") {
       begin
-        self.start_download_worker(peer, work_queue, results)
+        self.start_download_worker(peer, work_queue, results, reporter)
       rescue e
-        Log.warn { "#{peer} shutting down due to #{e.class}" }
+        Log.warn(exception: e) { "#{peer} shutting down due to #{e.class}" }
       end
       }
     } unless todo == 0
@@ -87,26 +91,26 @@ record Torrent,
     # collect results
     todo.times { |n_done|
       res = results.receive
-      piece_start, piece_end = self.calculate_bounds_for_piece(res.index)
-      Log.debug { "size: #{res.buf.size} index: #{res.index}: #{piece_start}, #{piece_end}" }
 
-      dest = File.join("./data/#{res.index}.part")
+      Log.debug { "size: #{res.buf.size} index: #{res.index}" }
+
+      dest = part_path.call(res.index)
       File.open(dest, "w") do |io|
         io.write res.buf
       end
-      percent = n_done.to_f / self.piece_hashes.size * 100
+      percent = (piece_total - todo + n_done + 1).to_f / piece_total * 100
       Log.info { "(#{percent.round(2)}%) Downloaded piece ##{res.index}" }
     }
 
     work_queue.close
-    File.open("./data/debian.iso", "w") { |target|
-      Log.info { "Writing" }
-      piece_hashes.size.times { |idx|
-        File.open("./data/#{idx}.part", "r") { |source|
+    File.open(path, "w") { |target|
+      Log.info { "Writing to #{path}" }
+      piece_total.times { |idx|
+        File.open(part_path.call(idx.to_u), "r") { |source|
           IO.copy source, target
-          Log.info { "written #{idx}" }
         }
       }
+      Log.info { "Written to #{path}" }
     }
   end
 end

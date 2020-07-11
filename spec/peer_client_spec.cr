@@ -14,6 +14,9 @@ spawn do
       puts "received hs"
       Handshake.new(h.info_hash, peer_id).encode(client)
       Message::Bitfield.new(Bytes[255, 1, 3]).encode(client)
+
+      Message::Unchoke.decode(client)
+      Message::Interested.decode(client)
     end
   end
 end

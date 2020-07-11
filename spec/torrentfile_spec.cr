@@ -12,7 +12,7 @@ describe TorrentFile do
   pending "can download to file" do
     t = TorrentFile.open("./spec/testdata/debian.iso.torrent")
 
-    t.download_to_file("./res")
+    t.to_torrent
   end
 
   it "reads from file" do

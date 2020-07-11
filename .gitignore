@@ -1,6 +1,7 @@
 /docs/
 /lib/
 /bin/
-/data
 /.shards/
 *.dwarf
+app.log
+torrent_client

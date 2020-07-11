@@ -56,9 +56,10 @@ record Torrent,
     end_point - begin_point
   end
 
-  def download(path, reporter)
+  def download(maybe_path, reporter)
     Log.info { "Starting download for #{self.name}" }
-    part_dir = "./data/#{self.name}"
+    part_dir = "./data/#{self.name}_parts"
+    out_path = maybe_path || "./data/#{self.name}"
     part_path = ->(index : UInt32) { File.join(part_dir, "#{index}.part") }
 
     Dir.mkdir(part_dir) unless Dir.exists?(part_dir)
@@ -80,11 +81,11 @@ record Torrent,
     # start workers
     self.peers.each { |peer|
       spawn(name: "#{peer}_worker") {
-      begin
-        self.start_download_worker(peer, work_queue, results, reporter)
-      rescue e
-        Log.warn(exception: e) { "#{peer} shutting down due to #{e.class}" }
-      end
+        begin
+          self.start_download_worker(peer, work_queue, results, reporter)
+        rescue e
+          Log.warn(exception: e) { "#{peer} shutting down due to #{e.class}" }
+        end
       }
     } unless todo == 0
 
@@ -103,14 +104,14 @@ record Torrent,
     }
 
     work_queue.close
-    File.open(path, "w") { |target|
-      Log.info { "Writing to #{path}" }
+    File.open(out_path, "w") { |target|
+      Log.info { "Writing to #{out_path}" }
       piece_total.times { |idx|
         File.open(part_path.call(idx.to_u), "r") { |source|
           IO.copy source, target
         }
       }
-      Log.info { "Written to #{path}" }
+      Log.info { "Written to #{out_path}" }
     }
   end
 end

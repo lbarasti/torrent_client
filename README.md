@@ -3,20 +3,36 @@
 TODO: Write a description here
 
 ## Installation
-
-TODO: Write installation instructions here
+```
+shards install # install dependencies
+crystal build -Dpreview_mt src/torrent_client.cr # compile with multi-threading support
+```
 
 ## Usage
+```
+CRYSTAL_WORKERS=<n-workers>  ./torrent_client <torrent> [<destination>]
+```
 
-TODO: Write usage instructions here
+#### Examples
+```
+CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian.iso.torrent ./data/debian.iso
+CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian-10.2.0-amd64-netinst.iso.torrent
+```
 
 ## Development
+#### Compile and run
+```
+crystal src/torrent_client.cr ./spec/testdata/debian.iso.torrent ./data/debian.iso
+```
 
-TODO: Write development instructions here
+#### Running the specs
+```
+crystal specs
+```
 
 ## Contributing
 
-1. Fork it (<https://github.com/your-github-user/torrent_client/fork>)
+1. Fork it (<https://github.com/lbarasti/torrent_client/fork>)
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
@@ -24,4 +40,4 @@ TODO: Write development instructions here
 
 ## Contributors
 
-- [lbarasti](https://github.com/your-github-user) - creator and maintainer
+- [lbarasti](https://github.com/lbarasti) - creator and maintainer

@@ -160,7 +160,6 @@ module Message
     end
   end
 
-
   class NotInterested < Msg
     getter payload_size = 0
     getter msg_id = MsgId::NotInterested

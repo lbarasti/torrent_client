@@ -10,7 +10,7 @@ Log.setup do |c|
 end
 
 torrent_path = ARGV[0]
-out_path = ARGV[1]
+out_path = ARGV[1]?
 
 TorrentFile.open(torrent_path)
   .to_torrent

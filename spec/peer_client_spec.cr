@@ -27,7 +27,7 @@ describe PeerClient do
   peer = Peer.new("0.0.0.0", 3000)
   peer_id = Random.new.random_bytes(20)
   info_hash = Random.new.random_bytes(20)
-  
+
   it "connects to a peer" do
     c = PeerClient.new(peer, info_hash: info_hash, peer_id: peer_id)
     c.bitfield.bitfield.should eq Bytes[255, 1, 3]

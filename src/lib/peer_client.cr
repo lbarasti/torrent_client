@@ -5,11 +5,13 @@ require "./message"
 
 class PeerClient
   MAX_BLOCK_SIZE = 16384
-  MAX_BACKLOG = 5
+  MAX_BACKLOG    =     5
+
   class InfoHashMismatch < Exception
   end
 
   getter bitfield, client
+
   # May raise
   # * Socket::ConnectError if the connection to the peer takes too long
   # * IO::TimeoutError if reading from the peer takes too long
@@ -29,7 +31,7 @@ class PeerClient
     @client.read_timeout = 5.seconds
     @bitfield = Message::Msg.decode(@client)
       .as(Message::Bitfield)
-    
+
     Log.debug { "received bitfield from #{@peer}" }
 
     Message::Unchoke.new.encode(client)
@@ -49,7 +51,7 @@ class PeerClient
           block_size = Math.min(MAX_BLOCK_SIZE, pw.length - requested).to_u
           req = Message::Request.new(
             pw.index, requested, block_size)
-          
+
           req.encode @client
           requested += block_size
         }

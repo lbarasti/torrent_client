@@ -27,7 +27,7 @@ describe Message do
     expected = Bytes[
       0, 0, 0, (bf.bitfield.size + 1),
       Message::MsgId::Bitfield,
-      1, 2, 3, 4, 5
+      1, 2, 3, 4, 5,
     ]
     bf.encode.should eq expected
   end
@@ -108,7 +108,7 @@ describe Message do
 
   it "supports Bitfield updates" do
     bf = Message::Bitfield.new(Bytes[0, 3, 255, 4])
-    
+
     bf.has_piece(3).should be_false
     bf.set_piece(3)
     bf.has_piece(3).should be_true

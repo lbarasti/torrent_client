@@ -40,6 +40,7 @@ class PeerClient
 
   def download(pw : PieceWork) : Bytes
     @client.read_timeout = 30.seconds
+    @client.write_timeout = 30.seconds
     requested = 0_u32
     dowloaded = 0_u32
     buffer = Bytes.new(pw.length)
@@ -53,6 +54,7 @@ class PeerClient
             pw.index, requested, block_size)
 
           req.encode @client
+          Log.debug { "requested block starting at ##{requested} of #{pw.index} from #{@peer}" }
           requested += block_size
         }
 
@@ -62,10 +64,13 @@ class PeerClient
           when Message::Have
             @bitfield.set_piece(msg.index)
           when Message::Piece
+            Log.debug { "received piece #{pw.index} from #{@peer}" }
             n = msg.write(pw.index, buffer)
             dowloaded += n
             backlog += 1
             break if backlog == MAX_BACKLOG || dowloaded == pw.length
+          else
+            sleep rand(5)
           end
         end
       end

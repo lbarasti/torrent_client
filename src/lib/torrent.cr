@@ -43,7 +43,7 @@ record Torrent,
       reporter.send({peer: peer, piece: pw.index, status: :completed})
       results.send(res)
     rescue e
-      Log.warn { "#{peer} shutting down due to #{e.class}" }
+      Log.warn(exception: e) { "#{peer} shutting down due to #{e.class}" }
       exceptions += 1
       work_queue.send(pw) unless pw.nil?
       break if exceptions > 5

@@ -4,3 +4,7 @@ shards:
     git: https://github.com/lbarasti/bencode.git
     version: 0.2.1
 
+  tallboy:
+    git: https://github.com/epoch/tallboy.git
+    version: 0.9.2
+

@@ -11,6 +11,8 @@ targets:
 dependencies:
   bencode:
     github: lbarasti/bencode
+  tallboy:
+    github: epoch/tallboy
 
 crystal: 0.35.1
 

@@ -26,27 +26,27 @@ record Torrent,
 
     client = PeerClient.new(peer, info_hash, peer_id)
 
-    reporter.send({peer: peer, status: :connected})
+    reporter.send(Connected.new(peer))
     loop do
       pw = work_queue.receive
       unless client.bitfield.has_piece(pw.index)
         work_queue.send pw
         next
       end
-      reporter.send({peer: peer, piece: pw.index, status: :started})
+      reporter.send(Started.new(peer, pw.index))
       buffer = client.download(pw)
       raise "hash mismatch" if pw.hash != OpenSSL::SHA1.hash(String.new(buffer)).to_slice
-      Log.debug { "#{peer} sending piece #{pw.index}" }
 
       Message::Have.new(pw.index).encode(client.@client)
       res = PieceResult.new(pw.index, buffer)
-      reporter.send({peer: peer, piece: pw.index, status: :completed})
+      reporter.send(Completed.new(peer, pw.index))
       results.send(res)
     rescue e
-      Log.warn { "#{peer} shutting down due to #{e.class}" }
+      break if work_queue.closed?
       exceptions += 1
+      Log.warn(exception: e) { "#{peer} rescued #{e.class} while processing #{pw} (exception ##{exceptions})" }
       work_queue.send(pw) unless pw.nil?
-      break if exceptions > 5
+      raise "Too many exceptions" if exceptions >= 3
     end
   end
 
@@ -76,6 +76,8 @@ record Torrent,
       work_queue.send PieceWork.new(index.to_u, hash, length)
     }.size
 
+    reporter.send(Initialized.new(total: piece_total, todo: todo))
+
     Log.info { "Pieces to be dowloaded: #{todo}" }
 
     # start workers
@@ -84,6 +86,7 @@ record Torrent,
         begin
           self.start_download_worker(peer, work_queue, results, reporter)
         rescue e
+          reporter.send(Terminated.new(peer))
           Log.warn(exception: e) { "#{peer} shutting down due to #{e.class}" }
         end
       }
@@ -93,14 +96,12 @@ record Torrent,
     todo.times { |n_done|
       res = results.receive
 
-      Log.debug { "size: #{res.buf.size} index: #{res.index}" }
+      Log.debug { "Writing piece ##{res.index} (#{res.buf.size}B)" }
 
       dest = part_path.call(res.index)
       File.open(dest, "w") do |io|
         io.write res.buf
       end
-      percent = (piece_total - todo + n_done + 1).to_f / piece_total * 100
-      Log.info { "(#{percent.round(2)}%) Downloaded piece ##{res.index}" }
     }
 
     work_queue.close

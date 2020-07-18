@@ -25,6 +25,13 @@ CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian-10.2.0-amd64-netinst.
 crystal src/torrent_client.cr ./spec/testdata/debian.iso.torrent ./data/debian.iso
 ```
 
+#### Messages
+Handshake:  Bytes[0, 0, 0, 169]
+Unchoke:    Bytes[0, 0, 0,   1, 1]
+Bitfield:   Bytes[0, 0, 0,   5, 5, ...]
+Keep-Alive: Bytes[0, 0, 0,   0]
+Piece:      Bytes[0, 0, 64,  9, 7, ...]
+
 #### Running the specs
 ```
 crystal specs

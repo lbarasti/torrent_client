@@ -28,7 +28,7 @@ module Message
       # FOCUS. Read an unsigned 32 bit integer from IO
       length_slice = Bytes.new(4, 0)
       io.read_fully?(length_slice)
-      Log.info { "MESSAGE: read #{length_slice}" }
+      # Log.info { "#{Fiber.current.name}: read #{length_slice}" }
       return KeepAlive.new if length_slice == Bytes.new(4, 0)
       length = read_uint(IO::Memory.new(length_slice))
       msg_id = MsgId.new(io.read_byte.not_nil!.to_i)

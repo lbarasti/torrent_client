@@ -3,7 +3,7 @@ require "./spec_helper"
 server_ready = Channel(Nil).new
 
 spawn do
-  test_server = TCPServer.new("localhost", 3000)
+  test_server = TCPServer.new("0.0.0.0", 3005)
 
   server_ready.send nil
   peer_id = Random.new.random_bytes(20)
@@ -24,7 +24,7 @@ end
 describe PeerClient do
   server_ready.receive
 
-  peer = Peer.new("0.0.0.0", 3000)
+  peer = Peer.new("0.0.0.0", 3005)
   peer_id = Random.new.random_bytes(20)
   info_hash = Random.new.random_bytes(20)
 

@@ -53,6 +53,8 @@ module Message
         Bitfield.new(data)
       when MsgId::Unchoke
         Unchoke.new
+      when MsgId::Interested
+        Interested.new
       else
         raise "Unsupported message id #{msg_id}"
       end
@@ -151,22 +153,6 @@ module Message
       write_uint(io, @index)
       write_uint(io, @piece_start)
       write_uint(io, @length)
-    end
-  end
-
-  class Interested < Msg
-    getter payload_size = 0
-    getter msg_id = MsgId::Interested
-
-    def payload(io)
-    end
-  end
-
-  class NotInterested < Msg
-    getter payload_size = 0
-    getter msg_id = MsgId::NotInterested
-
-    def payload(io)
     end
   end
 

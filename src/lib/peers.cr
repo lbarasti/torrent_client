@@ -1,6 +1,15 @@
 require "socket"
+require "json"
 
-alias Peer = Socket::IPAddress
+struct Peer
+  include JSON::Serializable
+
+  getter address : String
+  getter port : Int32
+
+  def initialize(@address, @port)
+  end
+end
 
 module Peers
   PEER_SIZE = 6

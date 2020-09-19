@@ -76,7 +76,7 @@ record Torrent,
       work_queue.send PieceWork.new(index.to_u, hash, length)
     }.size
 
-    reporter.send(Initialized.new(total: piece_total, todo: todo))
+    reporter.send(Initialized.new(name: name, total: piece_total, todo: todo))
 
     Log.info { "Pieces to be dowloaded: #{todo}" }
 

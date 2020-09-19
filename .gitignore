@@ -4,4 +4,5 @@
 /.shards/
 *.dwarf
 app.log
+history.log
 torrent_client

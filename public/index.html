@@ -1,0 +1,32 @@
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <!-- <link href="https://fonts.googleapis.com/css?family=Caveat&display=swap" rel="stylesheet"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="index.css">
+    <title>BitTorrent Client</title>
+  </head>
+  <body>
+    <header class="header-container">BitTorrent Client</header>
+    <div class="content" id="app">
+      <p>Downloading {{ name }} ({{ completed }} of {{ total }} completed)</p>
+      <table style="width:100%">
+        <tr>
+          <th>IP address</th>
+          <th>Status</th>
+          <th>Piece #</th>
+          <th>Downloaded</th>
+        </tr>
+        <tr is="peer-info"
+          v-for="peer in data"
+          :key="peer.peer"
+          :ip="peer.peer"
+          :status="peer.status"
+          :piece="peer.piece"
+          :downloaded="peer.downloaded"
+        ></tr>
+      </table>
+    </div>
+    <script src="index.js"></script>
+  </body>
+</html>

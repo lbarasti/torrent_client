@@ -13,6 +13,11 @@ dependencies:
     github: lbarasti/bencode
   tallboy:
     github: epoch/tallboy
+  ncurses:
+    github: SamualLB/ncurses
+  clim:
+    github: at-grandpa/clim
+    version: 0.14.0
 
 crystal: 0.35.1
 

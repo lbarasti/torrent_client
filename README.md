@@ -10,12 +10,27 @@ crystal build -Dpreview_mt src/torrent_client.cr # compile with multi-threading 
 
 ## Usage
 ```
-CRYSTAL_WORKERS=<n-workers>  ./torrent_client <torrent> [<destination>]
+CRYSTAL_WORKERS=<n-workers>  ./torrent_client <torrent_path> [options]
+
+Options:
+
+  -r, --replay                     Will replay events from the previous run. [type:Bool] [default:false]
+  -o <destination_path>, --output=<destination_path>
+                                    Download destination [type:String]
+  -m <minimal|ncurses|web>, --mode=<minimal|ncurses|web>
+                                    UI mode [type:String] [default:"minimal"]
+  --help                           Show this help.
+
+Arguments:
+
+  01. torrent_path      The torrent file you want to download. [type:String]
 ```
 
 #### Examples
 ```
-CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian.iso.torrent ./data/debian.iso
+CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian.iso.torrent -o ./data/debian.iso
+CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian.iso.torrent -m web
+CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian.iso.torrent -m ncurses
 CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian-10.2.0-amd64-netinst.iso.torrent
 ```
 

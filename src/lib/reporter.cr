@@ -2,6 +2,7 @@ require "./peers"
 require "tallboy"
 require "http/server"
 require "json"
+require "ncurses"
 
 abstract struct Event
   include JSON::Serializable
@@ -48,8 +49,14 @@ record TorrentStatus, name : String, completed : Int32, total : Int32, peers : A
   include JSON::Serializable
 end
 
+enum UI_Mode
+  Web
+  Ncurses
+  Minimal
+end
+
 class Reporter
-  def initialize(@io : File)
+  def initialize(@io : File, @mode : UI_Mode)
     @events = Channel(Event).new(1024)
     @refresh = Channel(TorrentStatus).new
 
@@ -85,32 +92,63 @@ class Reporter
         @refresh.send TorrentStatus.new(name, total - todo + n_done, total, peer_table)
       end
     end
-    # spawn(name: "UI") do
-    #   loop do
-    #     puts Tallboy.table {
-    #       header ["Peer", "Status", "Piece", "Downloaded"]
-    #       rows @refresh.receive
-    #     }
-    #     percent = (total - todo + n_done).to_f / total * 100
-    #     puts "(#{percent.round(2)}%) Downloaded #{total - todo + n_done} pieces out of #{total}"
-    #   end
-    # end
-    ws_handler = HTTP::WebSocketHandler.new do |ws, ctx|
-      loop do
-        torrent_status = @refresh.receive
-        ws.send torrent_status.to_json
+    case @mode
+    when UI_Mode::Ncurses
+      spawn(name: "UI") do
+        NCurses.start
+        loop do
+          torrent_status = @refresh.receive
+          NCurses.clear
+          NCurses.scrollok
+
+          name = torrent_status.name
+          completed = torrent_status.completed
+          total = torrent_status.total
+          peers = torrent_status.peers
+          active_peers = peers.select {|peer| peer.status != :terminated }
+          NCurses.print "Downloading #{name}: #{completed} pieces of #{total} completed (#{active_peers.size} peers)\n"
+
+          status_rows = active_peers.map { |peer|
+            [peer.peer, peer.status, peer.piece, peer.downloaded]
+          }
+          NCurses.print Tallboy.table {
+            header ["Peer", "Status", "Piece", "Downloaded"]
+            rows status_rows
+          }.to_s
+          NCurses.refresh
+        end
+        NCurses.end
       end
-    end
+    when  UI_Mode::Web
+      ws_handler = HTTP::WebSocketHandler.new do |ws, ctx|
+        loop do
+          torrent_status = @refresh.receive
+          ws.send torrent_status.to_json
+        end
+      end
 
-    spawn do
-      server = HTTP::Server.new([
-        ws_handler,
-        HTTP::StaticFileHandler.new(File.join(__DIR__, "../../public"))
-      ])
+      spawn do
+        server = HTTP::Server.new([
+          ws_handler,
+          HTTP::StaticFileHandler.new(File.join(__DIR__, "../../public"))
+        ])
 
-      address = server.bind_tcp 3000
-      puts "Listening on http://#{address}"
-      server.listen
+        address = server.bind_tcp 3000
+        puts "Listening on http://#{address}"
+        server.listen
+      end
+    else
+      spawn(name: "Minimal UI") do
+        loop do
+          torrent_status = @refresh.receive
+          name = torrent_status.name
+          completed = torrent_status.completed
+          total = torrent_status.total
+          peers = torrent_status.peers
+          active_peers = peers.select {|peer| peer.status != :terminated }
+          print "\rDownloading #{name}: #{completed} pieces of #{total} completed (#{active_peers.size} peers)"
+        end
+      end
     end
   end
 

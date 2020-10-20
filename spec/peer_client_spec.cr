@@ -15,6 +15,7 @@ spawn do
 
     Message::Unchoke.decode(client)
     Message::Interested.decode(client)
+    Message::Unchoke.new.encode(client)
   end
   test_server.close
 end

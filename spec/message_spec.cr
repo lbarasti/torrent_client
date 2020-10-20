@@ -5,7 +5,7 @@ describe Message do
     req = Message::Request.new(4, 567, 4321)
     expected = Bytes[
       0, 0, 0, 13,             # payload length
-      Message::MsgId::Request, # message id
+      Message::Request.msg_id, # message id
       0, 0, 0, 4,              # index
       0, 0, 2, 55,             # piece start
       0, 0, 16, 225]           # length
@@ -16,7 +16,7 @@ describe Message do
     have = Message::Have.new(42)
     expected = Bytes[
       0, 0, 0, 5,           # payload length
-      Message::MsgId::Have, # message id
+      Message::Have.msg_id, # message id
       0, 0, 0, 42]          # index
     have.encode.should eq expected
   end
@@ -26,14 +26,14 @@ describe Message do
 
     expected = Bytes[
       0, 0, 0, (bf.bitfield.size + 1),
-      Message::MsgId::Bitfield,
+      Message::Bitfield.msg_id,
       1, 2, 3, 4, 5,
     ]
     bf.encode.should eq expected
   end
 
   it "can decode Have messages" do
-    source = Bytes[0, 0, 0, 5, Message::MsgId::Have, 0, 0, 1, 0]
+    source = Bytes[0, 0, 0, 5, Message::Have.msg_id, 0, 0, 1, 0]
 
     have = Message::Msg.decode(IO::Memory.new(source))
     have.as(Message::Have).index.should eq 256
@@ -41,7 +41,7 @@ describe Message do
 
   it "can decode a Piece message" do
     source = Bytes[0, 0, 0, 15,
-      Message::MsgId::Piece,
+      Message::Piece.msg_id,
       0, 0, 1, 0,       # index
       0, 0, 1, 1,       # piece start
       0, 0, 1, 0, 0, 1] # data
@@ -56,7 +56,7 @@ describe Message do
     bitfield = Random.new.random_bytes(1024)
     io = IO::Memory.new
     io.write Bytes[0, 0, 4, 1]
-    io.write_byte Message::MsgId::Bitfield.to_u8
+    io.write_byte Message::Bitfield.msg_id.to_u8
     io.write bitfield
 
     bf = Message::Msg.decode(io.rewind)
@@ -65,7 +65,7 @@ describe Message do
   end
 
   it "raises an exception if the Have payload is too short" do
-    source = Bytes[0, 0, 0, 5, Message::MsgId::Have, 0, 0, 1]
+    source = Bytes[0, 0, 0, 5, Message::Have.msg_id, 0, 0, 1]
 
     expect_raises(IO::EOFError) {
       have = Message::Msg.decode(IO::Memory.new(source))
@@ -73,7 +73,7 @@ describe Message do
   end
 
   pending "raises an exception if the Have payload is too long" do
-    source = Bytes[0, 0, 0, 5, Message::MsgId::Have, 0, 0, 1, 0, 1]
+    source = Bytes[0, 0, 0, 5, Message::Have.msg_id, 0, 0, 1, 0, 1]
 
     expect_raises(IO::EOFError) {
       have = Message::Msg.decode(IO::Memory.new(source))
@@ -112,5 +112,10 @@ describe Message do
     bf.has_piece(3).should be_false
     bf.set_piece(3)
     bf.has_piece(3).should be_true
+  end
+
+  it "supports KeepAlive messages" do
+    empty_io = IO::Memory.new(Bytes.new(4, 0))
+    Message::Msg.decode(empty_io).should be_a Message::KeepAlive
   end
 end

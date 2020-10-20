@@ -2,24 +2,13 @@ require "./io_encodable"
 require "log"
 
 module Message
-  enum MsgId
-    Choke         # chokes the receiver
-    Unchoke       # unchokes the receiver
-    Interested    # expresses interest in receiving data
-    NotInterested # expresses disinterest in receiving data
-    Have          # alerts the receiver that the sender has downloaded a piece
-    Bitfield      # encodes which pieces that the sender has downloaded
-    Request       # requests a block of data from the receiver
-    Piece         # delivers a block of data to fulfill a request
-    Cancel        # cancels a request
-    KeepAlive     # empty message
-  end
+  private EmptyUInt32 = Bytes.new(4, 0)
+  private KeepAliveInstance = KeepAlive.new
 
-  abstract class Msg
+  abstract struct Msg
     include IoEncodable
 
     abstract def payload_size
-    abstract def msg_id
     abstract def payload(io : IO)
 
     # decodes a stream in the format
@@ -29,16 +18,17 @@ module Message
       length_slice = Bytes.new(4, 0)
       io.read_fully?(length_slice)
       # Log.info { "#{Fiber.current.name}: read #{length_slice}" }
-      return KeepAlive.new if length_slice == Bytes.new(4, 0)
+      return KeepAliveInstance if length_slice == EmptyUInt32
+
       length = read_uint(IO::Memory.new(length_slice))
-      msg_id = MsgId.new(io.read_byte.not_nil!.to_i)
+      msg_id = io.read_byte.try(&.to_i)
 
       case msg_id
-      when MsgId::Have
+      when Have.msg_id
         # TODO: Assert length == 4
         index = read_uint(io)
         Have.new(index)
-      when MsgId::Piece
+      when Piece.msg_id
         # TODO: Assert payload size >= 8
         index = read_uint(io)
         piece_start = read_uint(io)
@@ -47,14 +37,16 @@ module Message
         io.read_fully(data) # will throw IO::EOFError if the io is not long enough
         # TODO: Assert IO has ended
         Piece.new(index, piece_start, data)
-      when MsgId::Bitfield
+      when Bitfield.msg_id
         data = Bytes.new(length - 1)
         io.read_fully(data)
         Bitfield.new(data)
-      when MsgId::Unchoke
+      when Unchoke.msg_id
         Unchoke.new
-      when MsgId::Interested
+      when Interested.msg_id
         Interested.new
+      when Choke.msg_id
+        Choke.new
       else
         raise "Unsupported message id #{msg_id}"
       end
@@ -64,7 +56,7 @@ module Message
       length = (self.payload_size + 1).to_u32
       # FOCUS. Write byte-representation of a number to IO
       write_uint(io, length)
-      io.write_byte self.msg_id.to_u8
+      io.write_byte {{@type}}.msg_id.to_u8
       self.payload(io)
     end
 
@@ -77,26 +69,22 @@ module Message
     end
   end
 
-  class Have < Msg
+  # Have: tells the receiver that the sender has downloaded a piece
+  record Have < Msg, index : UInt32 do
     getter payload_size = 4
-    getter msg_id = MsgId::Have
-    getter index
-
-    def initialize(@index : UInt32)
-    end
+    class_getter msg_id = 4
 
     def payload(io)
       write_uint(io, @index)
     end
   end
 
-  class Bitfield < Msg
-    getter payload_size : Int32
-    getter msg_id = MsgId::Bitfield
-    getter bitfield
+  # Bitfield: encodes which pieces that the sender has downloaded
+  record Bitfield < Msg, bitfield : Bytes do
+    class_getter msg_id = 5
 
-    def initialize(@bitfield : Bytes)
-      @payload_size = @bitfield.size
+    def payload_size
+      @bitfield.size
     end
 
     def payload(io)
@@ -116,13 +104,12 @@ module Message
     end
   end
 
-  class Piece < Msg
-    getter msg_id = MsgId::Piece
-    getter index, piece_start, data
-    getter payload_size : Int32
+  # Piece: delivers a block of data to fulfill a request
+  record Piece < Msg, index : UInt32, piece_start : UInt32, data : Bytes do
+    class_getter msg_id = 7
 
-    def initialize(@index : UInt32, @piece_start : UInt32, @data : Bytes)
-      @payload_size = 8 + data.size
+    def payload_size
+      8 + data.size
     end
 
     def payload(io : IO)
@@ -141,13 +128,10 @@ module Message
     end
   end
 
-  class Request < Msg
+  # Request: requests a block of data from the receiver
+  record Request < Msg, index : UInt32, piece_start : UInt32, length : UInt32 do
     getter payload_size = 12
-    getter msg_id = MsgId::Request
-    getter index, piece_start, length
-
-    def initialize(@index : UInt32, @piece_start : UInt32, @length : UInt32)
-    end
+    class_getter msg_id = 6
 
     def payload(io)
       write_uint(io, @index)
@@ -156,10 +140,15 @@ module Message
     end
   end
 
-  {% for t in ["Interested", "NotInterested", "Unchoke", "KeepAlive"] %}
-  class {{t.id}} < Msg
+  # KeepAlive     : empty message
+  # Choke         : chokes the receiver
+  # Unchoke       : unchokes the receiver
+  # Interested    : expresses interest in receiving data
+  # NotInterested : expresses disinterest in receiving data
+  {% for t, index in ["KeepAlive", "Choke", "Unchoke", "Interested", "NotInterested"] %}
+  struct {{t.id}} < Msg
     getter payload_size = 0
-    getter msg_id = MsgId::{{t.id}}
+    class_getter msg_id = {{index - 1}}
 
     def payload(io)
     end

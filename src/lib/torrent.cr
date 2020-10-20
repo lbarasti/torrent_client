@@ -22,11 +22,10 @@ record Torrent,
   name : String do
   def start_download_worker(peer : Peer, work_queue : Channel(PieceWork), results : Channel(PieceResult), reporter : Reporter)
     Log.debug { "started worker for #{Fiber.current.name}" }
-    exceptions = 0
 
     client = PeerClient.new(peer, info_hash, peer_id)
-
     reporter.send(Connected.new(peer))
+
     loop do
       pw = work_queue.receive
       unless client.bitfield.has_piece(pw.index)
@@ -42,12 +41,11 @@ record Torrent,
       reporter.send(Completed.new(peer, pw.index))
       results.send(res)
     rescue e
-      break if work_queue.closed?
-      exceptions += 1
-      Log.warn(exception: e) { "#{peer} rescued #{e.class} while processing #{pw} (exception ##{exceptions})" }
-      work_queue.send(pw) unless pw.nil?
-      raise "Too many exceptions" if exceptions >= 3
+      Log.warn(exception: e) { "#{peer} rescued #{e.class} while processing #{pw}" }
+      work_queue.send(pw) unless (pw.nil? || work_queue.closed?)
+      break
     end
+    client.client.close
   end
 
   def piece_size(index)
@@ -86,8 +84,9 @@ record Torrent,
         begin
           self.start_download_worker(peer, work_queue, results, reporter)
         rescue e
-          reporter.send(Terminated.new(peer))
           Log.warn(exception: e) { "#{peer} shutting down due to #{e.class}" }
+        ensure
+          reporter.send(Terminated.new(peer))
         end
       }
     } unless todo == 0

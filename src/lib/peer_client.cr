@@ -36,6 +36,21 @@ class PeerClient
 
     Message::Unchoke.new.encode(client)
     Message::Interested.new.encode(client)
+
+    wait_for_unchoke(max_attempts: 3)
+  end
+
+  def wait_for_unchoke(max_attempts : Int32)
+    max_attempts.times do |i|
+      case msg = Message::Msg.decode(@client)
+      when Message::Unchoke
+        Log.debug { "unchoked by #{@peer}" }
+        break
+      else
+        Log.debug { "received #{msg} from #{@peer} instead of unchoke" }
+        raise "Could not unchoke" if i == max_attempts - 1
+      end
+    end
   end
 
   def download(pw : PieceWork) : Bytes
@@ -72,8 +87,8 @@ class PeerClient
             break if backlog == MAX_BACKLOG || dowloaded == pw.length
           else
             bounced += 1
-            raise "Bounced too many times" if bounced >= 5
-            sleep rand(5)
+            raise "Bounced too many times" if bounced >= 3
+            sleep rand(3)
           end
         end
       end

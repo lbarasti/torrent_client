@@ -36,9 +36,32 @@ Arguments:
 #### Examples
 ```
 CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian.iso.torrent -o ./data/debian.iso
+# sample output
+Downloading debian-10.2.0-amd64-netinst.iso: 2 pieces of 1340 completed (8 peers)
+```
+
+```
 CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian.iso.torrent -m web
+```
+![A web UI showing a table with peer information](./media/demo.gif)
+
+```
 CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian.iso.torrent -m ncurses
-CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian-10.2.0-amd64-netinst.iso.torrent
+# sample output
+Downloading debian-10.2.0-amd64-netinst.iso: 8 pieces of 1340 completed (9 peers)
+┌────────────────┬─────────────┬───────┬────────────┐
+│ Peer           │ Status      │ Piece │ Downloaded │
+├────────────────┼─────────────┼───────┼────────────┤
+│ 163.172.10.185 │ downloading │ 15    │ 2          │
+│ 163.172.43.117 │ finished    │ 7     │ 2          │
+│ 185.45.195.169 │ downloading │ 10    │ 1          │
+│ 176.9.45.212   │ downloading │ 12    │ 1          │
+│ 78.62.187.199  │ downloading │ 4     │ 0          │
+│ 185.148.3.52   │ downloading │ 13    │ 1          │
+│ 84.2.20.22     │ downloading │ 14    │ 1          │
+│ 91.239.69.64   │ downloading │ 9     │ 0          │
+│ 203.220.135.51 │ downloading │ 11    │ 0          │
+└────────────────┴─────────────┴───────┴────────────┘
 ```
 
 #### Prometheus integration

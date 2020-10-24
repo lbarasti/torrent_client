@@ -22,7 +22,7 @@ class CLI < Clim
     run do |opts, args|
       ui_mode = UI_Mode.parse(opts.mode)
       if opts.replay
-        reporter = Reporter.new(File.open(File::NULL, "w"), mode: ui_mode)
+        reporter = Reporter.new(File.open(File::NULL, "w"), ui_mode: ui_mode)
         event_log = File.new(File.join(__DIR__, "../history.log"), "r")
 
         event_log.each_line { |line|
@@ -32,7 +32,7 @@ class CLI < Clim
       else
         event_log = File.new(File.join(__DIR__, "../history.log"), "w")
 
-        reporter = Reporter.new(event_log, mode: ui_mode)
+        reporter = Reporter.new(event_log, ui_mode: ui_mode)
 
         TorrentFile.open(args.torrent_path.not_nil!)
           .to_torrent

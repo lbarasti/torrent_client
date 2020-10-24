@@ -1,6 +1,13 @@
 # torrent_client
 
-TODO: Write a description here
+A concurrent bit torrent downloader written in Crystal!
+
+## Background and design
+This application is a [Crystal](https://crystal-lang.org) port of Jesse Li's [golang client](https://github.com/veggiedefender/torrent-client/). I recommend Jesse's companion [article](https://blog.jse.li/posts/torrent/) on how bit torrent works, which served as an inspiration for this project.
+
+This project is meant for didactic purposes, and aims to illustrate differences in design choices and performance between Crystal and Go. The client can only download files, at the moment, but I'm planning on extending the functionality to support uploads, too.
+
+![Bit torrent downloader design: the main fiber contacts the tracker and starts a worker for each peer. Peers grab work out of a queue and send the downloaded torrent pieces to another queue. File parts are read off of the queue and stored on the file system. Once all parts are downloaded, a collector stores the consolidated file to the file system](./media/design.png)
 
 ## Installation
 ```
@@ -34,18 +41,21 @@ CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian.iso.torrent -m ncurse
 CRYSTAL_WORKERS=8  ./torrent_client ./spec/testdata/debian-10.2.0-amd64-netinst.iso.torrent
 ```
 
-## Development
-#### Compile and run
-```
-crystal src/torrent_client.cr ./spec/testdata/debian.iso.torrent ./data/debian.iso
-```
+#### Prometheus integration
+![A sample PromQL query and chart to report on downloaded KB/s](./media/prometheus_screenshot.jpeg)
+The application exposes prometheus metrics at `localhost:5000/metrics`. See the [crometheus](https://github.com/Darwinnn/crometheus) documentation for further information.
 
-#### Messages
-Handshake:  Bytes[0, 0, 0, 169]
-Unchoke:    Bytes[0, 0, 0,   1, 1]
-Bitfield:   Bytes[0, 0, 0,   5, 5, ...]
-Keep-Alive: Bytes[0, 0, 0,   0]
-Piece:      Bytes[0, 0, 64,  9, 7, ...]
+## Development
+#### Replaying
+To make local testing of UI and metrics collection simpler, you can start by downloading a file, e.g.
+```
+crystal src/torrent_client.cr ./spec/testdata/debian-10.2.0-amd64-netinst.iso.torrent
+```
+and then _replay_ the download on the following runs.
+```
+crystal src/torrent_client.cr --replay
+```
+A replay does not initiate any connection to peers, but simply replays the events stored in `history.log` - you'll see this file popping up in the project root folder after the first download.
 
 #### Running the specs
 ```

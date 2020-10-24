@@ -9,6 +9,11 @@ struct Peer
 
   def initialize(@address, @port)
   end
+
+  def to_s(io)
+    io << @address << ":"
+    @port.to_s(io)
+  end
 end
 
 module Peers

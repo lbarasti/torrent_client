@@ -8,6 +8,10 @@ shards:
     git: https://github.com/at-grandpa/clim.git
     version: 0.14.0
 
+  crometheus:
+    git: https://github.com/darwinnn/crometheus.git
+    version: 0.3.0+git.commit.922227e7c88027eb2cb4876399c9f0373e8d6f76
+
   ncurses:
     git: https://github.com/SamualLB/ncurses.git
     version: 0.0.8

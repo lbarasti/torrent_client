@@ -23,8 +23,8 @@ struct Started < Event
 end
 
 struct Completed < Event
-  getter peer, piece
-  def initialize(@peer : Peer, @piece : UInt32); end
+  getter peer, piece, size
+  def initialize(@peer : Peer, @piece : UInt32, @size : Int32); end
 end
 
 struct Terminated < Event

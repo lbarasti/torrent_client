@@ -1,3 +1,4 @@
+require "crometheus"
 require "./peers"
 require "./events"
 require "./ui/*"
@@ -23,15 +24,21 @@ UI = {
 }
 
 class Reporter
+  Crometheus.alias KB_Counter = Crometheus::Counter[:peer]
+
   def initialize(@io : File, ui_mode : UI_Mode)
     @events = Channel(Event).new(1024)
     status_stream = Channel(TorrentStatus).new
+
+    @downloaded_kb = KB_Counter.new(:downloaded, "KB downloaded")
 
     spawn(name: "event_processor") do
       process(@events, status_stream)
     end
 
     spawn UI[ui_mode].run(status_stream)
+
+    spawn Crometheus.default_registry.run_server
   end
 
   def send(message)
@@ -58,6 +65,7 @@ class Reporter
       when Completed
         downloaded = peer_data[event.peer].downloaded + 1
         peer_data[event.peer] = peer_data[event.peer].copy_with(status: :finished, piece: event.piece, downloaded: downloaded)
+        @downloaded_kb[peer: event.peer.to_s].inc event.size
         n_done += 1
       when Terminated
         curr = peer_data[event.peer]?

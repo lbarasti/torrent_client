@@ -38,7 +38,7 @@ record Torrent,
 
       Message::Have.new(pw.index).encode(client.@client)
       res = PieceResult.new(pw.index, buffer)
-      reporter.send(Completed.new(peer, pw.index))
+      reporter.send(Completed.new(peer, pw.index, buffer.size))
       results.send(res)
     rescue e
       Log.warn(exception: e) { "#{peer} rescued #{e.class} while processing #{pw}" }

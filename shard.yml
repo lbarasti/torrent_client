@@ -15,6 +15,9 @@ dependencies:
     github: epoch/tallboy
   ncurses:
     github: SamualLB/ncurses
+  crometheus:
+    github: darwinnn/crometheus
+    branch: master
   clim:
     github: at-grandpa/clim
     version: 0.14.0

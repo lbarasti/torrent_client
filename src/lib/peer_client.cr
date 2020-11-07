@@ -4,7 +4,7 @@ require "./handshake"
 require "./message"
 
 class PeerClient
-  MAX_BLOCK_SIZE = 16384
+  MAX_BLOCK_SIZE = 16384_u32
   MAX_BACKLOG    =     5
 
   class InfoHashMismatch < Exception
@@ -56,25 +56,24 @@ class PeerClient
   def download(pw : PieceWork) : Bytes
     @client.read_timeout = 5.seconds
     @client.write_timeout = 5.seconds
-    requested = 0_u32
-    dowloaded = 0_u32
     buffer = Bytes.new(pw.length)
 
-    while dowloaded < pw.length
-      while requested < pw.length
-        MAX_BACKLOG.times { # pipelining requests
-          break if requested >= pw.length
-          block_size = Math.min(MAX_BLOCK_SIZE, pw.length - requested).to_u
-          req = Message::Request.new(
-            pw.index, requested, block_size)
+    q, r = pw.length.divmod(MAX_BLOCK_SIZE)
+    number_of_blocks = q + r.sign
 
-          req.encode @client
-          # Log.debug { "requested block starting at ##{requested} of #{pw.index} from #{@peer}" }
-          requested += block_size
-        }
+    requests = (0...number_of_blocks).map { |block_id|
+      offset = MAX_BLOCK_SIZE * block_id
+      block_size = Math.min(MAX_BLOCK_SIZE, pw.length - offset).to_u
+      Message::Request.new(pw.index, offset, block_size) 
+    }
 
-        backlog = 0
-        bounced = 0
+    requests.each_slice(MAX_BACKLOG) { |batch|
+      batch.each { |req|
+        req.encode @client
+      }
+
+      bounced = 0
+      batch.each {
         loop do
           case msg = Message::Msg.decode(@client)
           when Message::Have
@@ -82,17 +81,15 @@ class PeerClient
           when Message::Piece
             # Log.debug { "received block for piece #{pw.index} from #{@peer}" }
             n = msg.write(pw.index, buffer)
-            dowloaded += n
-            backlog += 1
-            break if backlog == MAX_BACKLOG || dowloaded == pw.length
+            break
           else
             bounced += 1
             raise "Bounced too many times" if bounced >= 3
             sleep rand(3)
           end
         end
-      end
-    end
+      }
+    }
     Log.debug { "#{@peer} completed piece ##{pw.index}" }
     buffer
   end
